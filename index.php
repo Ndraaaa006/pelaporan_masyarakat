@@ -1,4 +1,14 @@
 <?php
+/**
+ * WargaSuara - Layanan Aspirasi & Pengaduan Online Rakyat
+
+ */
+
+// Konfigurasi Session yang Aman
+ini_set('session.cookie_httponly', 1);
+ini_set('session.cookie_secure', isset($_SERVER['HTTPS']));
+ini_set('session.use_strict_mode', 1);
+
 session_start();
 require_once 'config/koneksi.php';
 
@@ -21,91 +31,135 @@ if ($stmt) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WargaSuara - Layanan Aspirasi & Pengaduan Online Rakyat</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22 fill=%22%230d6efd%22><path d=%22M5.338 1.59a61.44 61.44 0 0 0-2.834.858.75.75 0 0 0-.5.7v6.903c0 3.14 1.93 5.37 4.14 6.57l.19.103.19-.103c2.21-1.2 4.14-3.43 4.14-6.57V3.148a.75.75 0 0 0-.5-.7 61.44 61.44 0 0 0-2.834-.858l-.515-.132zm-.714 1.705c1.43-.372 2.87-.372 4.304 0 .584.152 1.157.348 1.716.586v4.622c0 2.455-1.465 4.314-3.57 5.394-2.105-1.08-3.57-2.94-3.57-5.394V3.881c.56-.238 1.132-.434 1.716-.586z%22/></svg>">
+    <title>WargaSuara — Suara Rakyat, Solusi Cepat</title>
+    <!-- Icon Megafon yang diperbaiki agar tampil sempurna di tab browser -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22 fill=%22%232a5298%22><path d=%22M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-.214c-2.162-1.241-4.49-1.843-6.912-1.773l-.405.012A1.5 1.5 0 0 1 4.5 10.3V5.7a1.5 1.5 0 0 1 1.183-1.469l.405-.012c2.422-.07 4.75-.672 6.912-1.773V2.5zM3 4.5a.5.5 0 0 0-.5.5v6a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5z%22/></svg>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body, .navbar, .card, footer, .bg-white {
-            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        :root {
+            --bs-body-font-family: 'Plus Jakarta Sans', sans-serif;
+            --primary-gradient: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        }
+        body {
+            font-family: var(--bs-body-font-family);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .navbar {
+            backdrop-filter: blur(12px);
+            background-color: rgba(255, 255, 255, 0.85) !important;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        [data-bs-theme="dark"] .navbar {
+            background-color: rgba(15, 23, 42, 0.85) !important;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
         }
         .hero-section {
-            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
-            color: white;
-            padding: 80px 0;
+            background: var(--primary-gradient);
+            color: #ffffff;
+            padding: 110px 0 130px 0;
             border-bottom-left-radius: 40px;
             border-bottom-right-radius: 40px;
+            position: relative;
+            overflow: hidden;
         }
-        [data-bs-theme="dark"] .hero-section {
-            background: linear-gradient(135deg, #1b263b 0%, #0d1b2a 100%);
+        .hero-section::before {
+            content: "";
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 50%;
+            top: -200px;
+            right: -100px;
+            pointer-events: none;
         }
-        .feature-icon {
+        .custom-card {
+            border: none;
+            border-radius: 16px;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            background: var(--bs-body-bg);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        }
+        .custom-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+        }
+        .icon-box {
             width: 60px;
             height: 60px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 50%;
-            background-color: rgba(13, 110, 253, 0.1);
-            color: #0d6efd;
+            border-radius: 14px;
+            background: rgba(42, 82, 152, 0.1);
+            color: #2a5298;
             font-size: 1.5rem;
-            margin: 0 auto 15px auto;
+            margin-bottom: 1.2rem;
         }
-        .card-aduan {
+        .badge-soft {
+            background-color: rgba(42, 82, 152, 0.1);
+            color: #2a5298;
+            font-weight: 600;
+        }
+        [data-bs-theme="dark"] .badge-soft {
+            background-color: rgba(56, 122, 232, 0.15);
+            color: #60a5fa;
+        }
+        .btn-main {
+            background-color: #2a5298;
             border: none;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            transition: transform 0.2s;
+            color: #fff;
+            font-weight: 600;
+            transition: background 0.2s ease;
         }
-        .card-aduan:hover {
-            transform: translateY(-5px);
+        .btn-main:hover {
+            background-color: #1e3c72;
+            color: #fff;
         }
-        /* Menyoroti menu aktif dengan tegas */
-        .navbar-nav .nav-link.active {
-            color: #0d6efd !important;
-            font-weight: bold;
+        footer {
+            background-color: #0f172a;
+            color: #94a3b8;
         }
     </style>
 </head>
 <body>
 
-    <!-- Navbar dengan ID agar mudah dideteksi scroll -->
-    <nav class="navbar navbar-expand-lg shadow-sm py-3 sticky-top bg-body">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg fixed-top py-3">
         <div class="container">
-            <a class="navbar-brand fw-bold text-primary d-flex align-items-center gap-2" href="index.php">
-                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
-                    <i class="bi bi-shield-check fs-5"></i>
+            <a class="navbar-brand fw-bold d-flex align-items-center gap-2 text-dark text-decoration-none" href="index.php">
+                <div class="bg-primary text-white rounded-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px;">
+                    <i class="bi bi-megaphone-fill fs-6"></i>
                 </div>
-                <span>Warga<span class="text-info">Suara</span></span>
+                <span class="fs-5 tracking-tight">Warga<span class="text-primary">Suara</span></span>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto align-items-center gap-lg-2">
+            <div class="collapse navbar-collapse" id="navContent">
+                <ul class="navbar-nav ms-auto align-items-center gap-lg-3">
                     <li class="nav-item">
-                        <a class="nav-link" href="index.php">Beranda</a>
+                        <a class="nav-link px-3 py-2 rounded-pill fw-medium" href="index.php">Beranda</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#cara-kerja">Cara Kerja</a>
+                        <a class="nav-link px-3 py-2 rounded-pill fw-medium" href="#alur">Alur Layanan</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#aduan-selesai">Aduan Selesai</a>
+                        <a class="nav-link px-3 py-2 rounded-pill fw-medium" href="#aduan">Aduan Selesai</a>
                     </li>
-                    
-                    <!-- Tombol Switch Dark / Light Mode -->
-                    <li class="nav-item">
-                        <button class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-1 d-flex align-items-center gap-2" id="darkModeToggle" title="Ubah Tema Tampilan">
+                    <li class="nav-item my-2 my-lg-0">
+                        <button class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-2 d-flex align-items-center gap-2 border-opacity-25" id="darkModeToggle" title="Ganti Tema">
                             <i class="bi bi-moon-fill" id="themeIcon"></i>
-                            <span id="themeText" class="small">Tema</span>
+                            <span id="themeText" class="small fw-semibold">Tema</span>
                         </button>
                     </li>
-
-                    <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
+                    <li class="nav-item ms-lg-2">
                         <?php if (isset($_SESSION['login']) || isset($_SESSION['user_id']) || isset($_SESSION['nik'])): ?>
-                            <a href="dashboard.php" class="btn btn-primary rounded-pill px-4">Dashboard Saya</a>
+                            <a href="dashboard.php" class="btn btn-main rounded-pill px-4 py-2 shadow-sm">Dashboard Saya</a>
                         <?php else: ?>
-                            <a href="login.php" class="btn btn-outline-primary rounded-pill px-4">Login</a>
+                            <a href="login.php" class="btn btn-main rounded-pill px-4 py-2 shadow-sm">Masuk / Daftar</a>
                         <?php endif; ?>
                     </li>
                 </ul>
@@ -113,20 +167,24 @@ if ($stmt) {
         </div>
     </nav>
 
-    <!-- Hero Section / Beranda -->
-    <section id="beranda" class="hero-section text-center">
-        <div class="container">
+    <!-- Hero Section -->
+    <section class="hero-section text-center">
+        <div class="container position-relative py-5">
             <div class="row justify-content-center">
                 <div class="col-lg-8">
-                    <span class="badge bg-light text-primary px-3 py-2 rounded-pill fw-bold mb-3 shadow-sm">Layanan Aspirasi & Pengaduan Online Resmi</span>
-                    <h1 class="display-4 fw-bold mb-3">Sampaikan Keluhan Anda untuk Lingkungan Lebih Baik</h1>
-                    <p class="lead mb-4 text-white-50">Sampaikan laporan, keluhan, atau aspirasi pembangunan di sekitar Anda dengan mudah, cepat, dan transparan.</p>
-                    <div class="d-flex flex-wrap gap-2 justify-content-center">
-                        <a href="dashboard.php" class="btn btn-light btn-lg fw-bold rounded-pill px-4 shadow">
-                            <i class="bi bi-pencil-square me-2"></i>Buat Pengaduan Sekarang
+                    <span class="badge badge-soft px-3 py-2 rounded-pill mb-3 text-white bg-white bg-opacity-10 border border-white border-opacity-25">
+                        <i class="bi bi-megaphone-fill text-info me-1"></i> Portal Aspirasi & Pengaduan Resmi Masyarakat
+                    </span>
+                    <h1 class="display-5 fw-bold mb-3 lh-tight">Suara Anda Penentu Kemajuan Bersama</h1>
+                    <p class="lead mb-4 text-white-50 mx-auto fs-6" style="max-width: 600px;">
+                        Sampaikan keluhan, kritik, atau saran pembangunan fasilitas umum secara transparan dan langsung ditangani oleh instansi berwenang.
+                    </p>
+                    <div class="d-flex flex-wrap gap-3 justify-content-center">
+                        <a href="dashboard.php" class="btn btn-light text-primary fw-bold rounded-pill px-4 py-3 shadow">
+                            <i class="bi bi-pencil-square me-1"></i> Buat Laporan Baru
                         </a>
-                        <a href="#cara-kerja" class="btn btn-outline-light btn-lg fw-bold rounded-pill px-4">
-                            Pelajari Alur
+                        <a href="#alur" class="btn btn-outline-light fw-bold rounded-pill px-4 py-3">
+                            Pelajari Alur <i class="bi bi-arrow-down ms-1"></i>
                         </a>
                     </div>
                 </div>
@@ -134,39 +192,39 @@ if ($stmt) {
         </div>
     </section>
 
-    <!-- Cara Kerja Section -->
-    <section id="cara-kerja" class="py-5 border-top">
-        <div class="container">
+    <!-- Alur Layanan Section -->
+    <section id="alur" class="py-5 my-3">
+        <div class="container py-4">
             <div class="text-center mb-5">
-                <h2 class="fw-bold">Alur Pengaduan</h2>
-                <p class="text-muted">3 langkah mudah menyampaikan aspirasi Anda</p>
+                <h2 class="fw-bold mb-2">Bagaimana Cara Kerjanya?</h2>
+                <p class="text-secondary small">Proses pengaduan dirancang cepat, ringkas, dan terpantau secara real-time.</p>
             </div>
-            <div class="row g-4 text-center">
+            <div class="row g-4">
                 <div class="col-md-4">
-                    <div class="p-4">
-                        <div class="feature-icon">
-                            <i class="bi bi-person-plus-fill"></i>
+                    <div class="custom-card p-4 h-100">
+                        <div class="icon-box">
+                            <i class="bi bi-person-badge"></i>
                         </div>
-                        <h5 class="fw-bold">1. Login / Daftar</h5>
-                        <p class="text-muted small">Masuk menggunakan akun warga yang sudah terdaftar di sistem.</p>
+                        <h5 class="fw-bold mb-2">1. Autentikasi Akun</h5>
+                        <p class="text-secondary small mb-0">Masuk atau daftar dengan identitas warga yang sah agar laporan tervalidasi dengan baik oleh sistem.</p>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="p-4">
-                        <div class="feature-icon">
-                            <i class="bi bi-chat-square-text-fill"></i>
+                    <div class="custom-card p-4 h-100">
+                        <div class="icon-box">
+                            <i class="bi bi-file-earmark-richtext"></i>
                         </div>
-                        <h5 class="fw-bold">2. Tulis Laporan</h5>
-                        <p class="text-muted small">Tuliskan judul, detail keluhan, dan unggah foto bukti kejadian di lapangan.</p>
+                        <h5 class="fw-bold mb-2">2. Tulis & Unggah Bukti</h5>
+                        <p class="text-secondary small mb-0">Deskripsikan permasalahan secara detail dan lampirkan foto dokumentasi kondisi di lapangan.</p>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="p-4">
-                        <div class="feature-icon">
-                            <i class="bi bi-check2-all"></i>
+                    <div class="custom-card p-4 h-100">
+                        <div class="icon-box">
+                            <i class="bi bi-gear-wide-connected"></i>
                         </div>
-                        <h5 class="fw-bold">3. Pantau Status</h5>
-                        <p class="text-muted small">Tunggu petugas memverifikasi dan melihat tanggapan langsung di dashboard Anda.</p>
+                        <h5 class="fw-bold mb-2">3. Tindak Lanjut Petugas</h5>
+                        <p class="text-secondary small mb-0">Laporan diverifikasi dan dikerjakan oleh instansi terkait hingga status berubah menjadi selesai.</p>
                     </div>
                 </div>
             </div>
@@ -174,11 +232,16 @@ if ($stmt) {
     </section>
 
     <!-- Section Aduan Selesai -->
-    <section id="aduan-selesai" class="py-5 bg-body-tertiary">
-        <div class="container">
-            <div class="text-center mb-5">
-                <h2 class="fw-bold">Aduan Masyarakat yang Telah Selesai</h2>
-                <p class="text-muted">Bukti transparansi penanganan laporan warga oleh petugas berwenang</p>
+    <section id="aduan" class="py-5 bg-body-tertiary border-top border-bottom">
+        <div class="container py-4">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-5 gap-3">
+                <div>
+                    <h2 class="fw-bold mb-1">Aduan Publik Selesai</h2>
+                    <p class="text-secondary small mb-0">Daftar laporan warga yang berhasil diselesaikan oleh tim di lapangan.</p>
+                </div>
+                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2 rounded-pill fw-semibold align-self-start">
+                    <i class="bi bi-check-circle-fill me-1"></i> Transparansi Teruji
+                </span>
             </div>
 
             <div class="row g-4">
@@ -186,32 +249,32 @@ if ($stmt) {
                 if ($query_selesai && mysqli_num_rows($query_selesai) > 0) {
                     while ($row = mysqli_fetch_assoc($query_selesai)) {
                         $foto = $row['foto'] ?? '';
-                        $path_foto = 'uploads/' . basename($foto);
+                        $safe_foto = basename($foto);
+                        $path_foto = 'uploads/' . $safe_foto;
                 ?>
                     <div class="col-md-4">
-                        <div class="card card-aduan h-100 overflow-hidden">
-                            <?php if (!empty($foto) && file_exists($path_foto)) { ?>
-                                <a href="<?= htmlspecialchars($path_foto, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" title="Klik untuk melihat foto ukuran penuh">
-                                    <img src="<?= htmlspecialchars($path_foto, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" class="card-img-top" style="height: 200px; object-fit: cover;" alt="Foto Bukti Aduan">
+                        <div class="custom-card h-100 overflow-hidden d-flex flex-column">
+                            <?php if (!empty($safe_foto) && file_exists($path_foto)) { ?>
+                                <a href="<?= htmlspecialchars($path_foto, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer">
+                                    <img src="<?= htmlspecialchars($path_foto, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" class="w-100" style="height: 200px; object-fit: cover;" alt="Bukti Foto">
                                 </a>
                             <?php } else { ?>
-                                <img src="https://via.placeholder.com/400x200?text=Tanpa+Foto+Bukti" class="card-img-top" style="height: 200px; object-fit: cover;" alt="Default Image">
-                            <?php } ?>
-                            
-                            <div class="card-body d-flex flex-column">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="badge bg-success rounded-pill px-3 py-1">Selesai</span>
-                                    <small class="text-muted"><?= htmlspecialchars($row['tgl_pengaduan'] ?? '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></small>
+                                <div class="bg-secondary bg-opacity-10 d-flex align-items-center justify-content-center text-muted" style="height: 200px;">
+                                    <i class="bi bi-image fs-1"></i>
                                 </div>
-                                
-                                <h6 class="fw-bold mb-1">Pelapor: <?= htmlspecialchars($row['nama'] ?? '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></h6>
-                                <p class="card-text text-secondary small flex-grow-1">
-                                    <?= nl2br(htmlspecialchars(substr($row['isi_laporan'] ?? '', 0, 100), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')) ?>...
+                            <?php } ?>
+
+                            <div class="card-body p-4 d-flex flex-column flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2.5 py-1 small fw-semibold">Selesai</span>
+                                    <small class="text-muted"><i class="bi bi-calendar-event me-1"></i><?= htmlspecialchars($row['tgl_pengaduan'] ?? '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></small>
+                                </div>
+                                <h6 class="fw-bold text-dark mb-2 text-truncate"><i class="bi bi-person-fill text-primary me-1"></i> <?= htmlspecialchars($row['nama'] ?? '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></h6>
+                                <p class="text-secondary small flex-grow-1 mb-3" style="line-height: 1.6;">
+                                    <?= nl2br(htmlspecialchars(substr($row['isi_laporan'] ?? '', 0, 90), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')) ?>...
                                 </p>
-                                
-                                <hr class="my-2 border-secondary opacity-25">
-                                <div class="text-center">
-                                    <span class="text-success small fw-semibold"><i class="bi bi-check-circle-fill me-1"></i> Telah Ditindaklanjuti Petugas</span>
+                                <div class="bg-body-secondary rounded-3 p-2 text-center mt-auto">
+                                    <small class="text-success fw-semibold"><i class="bi bi-check2-all me-1"></i> Penanganan Selesai</small>
                                 </div>
                             </div>
                         </div>
@@ -220,10 +283,11 @@ if ($stmt) {
                     }
                     mysqli_free_result($query_selesai);
                 } else {
-                    echo '<div class="col-12 text-center py-4">
-                            <div class="alert alert-info rounded-4 p-4 shadow-sm">
-                                <h5 class="fw-bold mb-1">Belum ada aduan yang selesai ditangani</h5>
-                                <p class="mb-0">Aduan masyarakat yang telah selesai diproses oleh petugas akan otomatis tampil di sini.</p>
+                    echo '<div class="col-12 text-center py-5">
+                            <div class="p-5 border rounded-4 bg-body text-muted shadow-sm">
+                                <i class="bi bi-inbox fs-2 mb-2 d-block text-primary"></i>
+                                <h6 class="fw-bold mb-1">Belum Ada Aduan Selesai</h6>
+                                <p class="small mb-0 text-secondary">Aduan yang telah rampung ditangani akan muncul otomatis di ruang publik ini.</p>
                             </div>
                           </div>';
                 }
@@ -236,51 +300,50 @@ if ($stmt) {
         </div>
     </section>
 
-    <!-- Footer Modern -->
-    <footer class="bg-dark text-white pt-5 pb-3">
+    <!-- Footer -->
+    <footer class="pt-5 pb-4">
         <div class="container">
             <div class="row g-4 mb-4">
-                <div class="col-md-4">
-                    <h5 class="fw-bold text-primary mb-3 d-flex align-items-center gap-2">
-                        <i class="bi bi-shield-check"></i>WargaSuara
+                <div class="col-md-5">
+                    <h5 class="fw-bold text-white mb-3 d-flex align-items-center gap-2">
+                        <div class="bg-primary text-white rounded-3 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                            <i class="bi bi-megaphone-fill fs-6"></i>
+                        </div>
+                        WargaSuara
                     </h5>
-                    <p class="text-white-50 small">
-                        Kanal aspirasi dan pengaduan resmi masyarakat. Wujudkan pelayanan publik yang cepat, transparan, dan akuntabel.
+                    <p class="small text-secondary mb-3" style="line-height: 1.7; max-width: 380px;">
+                        Layanan pengaduan masyarakat terpadu untuk mewujudkan pelayanan publik yang lebih responsif, bersih, dan akuntabel.
                     </p>
                 </div>
                 <div class="col-md-3">
-                    <h6 class="fw-bold mb-3">Tautan Cepat</h6>
-                    <ul class="list-unstyled small text-white-50">
-                        <li class="mb-2"><a href="index.php" class="text-white-50 text-decoration-none">Beranda</a></li>
-                        <li class="mb-2"><a href="#cara-kerja" class="text-white-50 text-decoration-none">Cara Kerja</a></li>
-                        <li class="mb-2"><a href="#aduan-selesai" class="text-white-50 text-decoration-none">Aduan Selesai</a></li>
-                        <li class="mb-2"><a href="login.php" class="text-white-50 text-decoration-none">Login Warga / Petugas</a></li>
+                    <h6 class="fw-bold text-white mb-3">Tautan Navigasi</h6>
+                    <ul class="list-unstyled small mb-0 d-flex flex-column gap-2">
+                        <li><a href="index.php" class="text-secondary text-decoration-none hover-white">Beranda Utama</a></li>
+                        <li><a href="#alur" class="text-secondary text-decoration-none hover-white">Alur Pelayanan</a></li>
+                        <li><a href="#aduan" class="text-secondary text-decoration-none hover-white">Daftar Aduan Selesai</a></li>
+                        <li><a href="login.php" class="text-secondary text-decoration-none hover-white">Masuk Sistem</a></li>
                     </ul>
                 </div>
-                <div class="col-md-3">
-                    <h6 class="fw-bold mb-3">Kontak Instansi</h6>
-                    <ul class="list-unstyled small text-white-50">
-                        <li class="mb-2"><i class="bi bi-geo-alt-fill me-2"></i> Jl. AmbarKetawang No. 45, Yogyakarta</li>
-                        <li class="mb-2"><i class="bi bi-telephone-fill me-2"></i> (+62) 822-4021-2641</li>
-                        <li class="mb-2"><i class="bi bi-envelope-fill me-2"></i> ciksup@wargasuara.go.id</li>
+                <div class="col-md-4">
+                    <h6 class="fw-bold text-white mb-3">Kontak & Layanan</h6>
+                    <ul class="list-unstyled small mb-0 d-flex flex-column gap-2 text-secondary">
+                        <li><i class="bi bi-geo-alt text-primary me-2"></i> Jl. Malioboro No. 12, Yogyakarta</li>
+                        <li>
+                            <a href="https://wa.me/6282240212641?text=Halo%20Admin%20WargaSuara" target="_blank" rel="noopener noreferrer" class="text-secondary text-decoration-none">
+                                <i class="bi bi-whatsapp text-success me-2"></i> (+62) 822-4021-2641
+                            </a>
+                        </li>
+                        <li><i class="bi bi-envelope text-info me-2"></i> layanan@wargasuara.go.id</li>
                     </ul>
-                </div>
-                <div class="col-md-2">
-                    <h6 class="fw-bold mb-3">Jam Layanan</h6>
-                    <p class="text-white-50 small mb-1">Setiap Hari</p>
-                    <p class="fw-bold small mb-3">08.00 - 16.00 WIB</p>
-                    <span class="badge bg-primary text-wrap">Sistem Online 24 Jam</span>
                 </div>
             </div>
-
-            <hr class="border-secondary">
-
+            <hr class="border-secondary opacity-25 my-4">
             <div class="row align-items-center">
-                <div class="col-md-6 text-center text-md-start">
-                    <small class="text-white-50">&copy; <?= htmlspecialchars(date('Y'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?> WargaSuara. Hak Cipta Dilindungi.</small>
+                <div class="col-md-6 text-center text-md-start small text-secondary">
+                    &copy; <?= date('Y') ?> WargaSuara. Hak Cipta Dilindungi Undang-Undang.
                 </div>
-                <div class="col-md-6 text-center text-md-end">
-                    <small class="text-white-50">Sistem Layanan Publik Berbasis Web</small>
+                <div class="col-md-6 text-center text-md-end small text-secondary mt-2 mt-md-0">
+                    Sistem Aplikasi Web Profesional
                 </div>
             </div>
         </div>
@@ -288,10 +351,8 @@ if ($stmt) {
 
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- Script JavaScript untuk Dark Mode & Scroll Spy (Menu aktif otomatis berubah) -->
     <script>
-        // 1. Logika Dark / Light Mode
+        // Toggle Dark/Light Mode
         const htmlElement = document.documentElement;
         const toggleBtn = document.getElementById('darkModeToggle');
         const themeIcon = document.getElementById('themeIcon');
@@ -299,20 +360,19 @@ if ($stmt) {
 
         const savedTheme = localStorage.getItem('theme') || 'light';
         htmlElement.setAttribute('data-bs-theme', savedTheme);
-        updateButtonUI(savedTheme);
+        updateUI(savedTheme);
 
         if (toggleBtn) {
             toggleBtn.addEventListener('click', () => {
-                let currentTheme = htmlElement.getAttribute('data-bs-theme');
-                let newTheme = currentTheme === 'light' ? 'dark' : 'light';
-                
-                htmlElement.setAttribute('data-bs-theme', newTheme);
-                localStorage.setItem('theme', newTheme);
-                updateButtonUI(newTheme);
+                let current = htmlElement.getAttribute('data-bs-theme');
+                let next = current === 'light' ? 'dark' : 'light';
+                htmlElement.setAttribute('data-bs-theme', next);
+                localStorage.setItem('theme', next);
+                updateUI(next);
             });
         }
 
-        function updateButtonUI(theme) {
+        function updateUI(theme) {
             if (!themeIcon) return;
             if (theme === 'dark') {
                 themeIcon.className = 'bi bi-sun-fill text-warning';
@@ -322,28 +382,6 @@ if ($stmt) {
                 if(themeText) themeText.textContent = 'Gelap';
             }
         }
-
-        // 2. Logika Scroll Spy (Menu Berubah Aktif Otomatis saat Layar Digulir)
-        const sections = document.querySelectorAll('header, section');
-        const navLinks = document.querySelectorAll('.navbar-nav .nav-link');
-
-        window.addEventListener('scroll', () => {
-            let current = '';
-            sections.forEach(section => {
-                const sectionTop = section.offsetTop;
-                const sectionHeight = section.clientHeight;
-                if (window.pageYOffset >= (sectionTop - 150)) {
-                    current = section.getAttribute('id');
-                }
-            });
-
-            navLinks.forEach(link => {
-                link.classList.remove('active');
-                if (link.getAttribute('href') === '#' + current || (current === 'beranda' && link.getAttribute('href') === 'index.php')) {
-                    link.classList.add('active');
-                }
-            });
-        });
     </script>
 </body>
 </html>

@@ -1,10 +1,34 @@
 <?php
-session_start();
+// Mulai sesi dengan pengamanan parameter cookie agar aman dari XSS/Hijacking di internet
+if (session_status() === PHP_SESSION_NONE) {
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'domain' => '',
+        'secure' => isset($_SERVER['HTTPS']),
+        'httponly' => true,
+        'samesite' => 'Strict'
+    ]);
+    session_start();
+}
+
 require_once 'config/koneksi.php';
 
 $error = '';
 
+// Batasi jika sudah login, lempar langsung ke halaman masing-masing agar tidak bisa akses halaman login lagi
+if (isset($_SESSION['level'])) {
+    if ($_SESSION['level'] == 'admin' || $_SESSION['level'] == 'petugas') {
+        header("Location: admin/dashboard.php");
+        exit();
+    } else if ($_SESSION['level'] == 'masyarakat') {
+        header("Location: masyarakat/dashboard.php");
+        exit();
+    }
+}
+
 if (isset($_POST['login'])) {
+    // Trim dan sanitasi input untuk mencegah celah keamanan dasar
     $username = trim($_POST['username']);
     $password = $_POST['password'];
 
@@ -12,43 +36,50 @@ if (isset($_POST['login'])) {
         $error = "Username dan password wajib diisi!";
     } else {
         // --- 1. CEK KE TABEL PETUGAS (Admin / Petugas) ---
-        $stmt_petugas = mysqli_prepare($koneksi, "SELECT * FROM petugas WHERE username = ? LIMIT 1");
+        $stmt_petugas = mysqli_prepare($koneksi, "SELECT id_petugas, nama_petugas, username, password, level FROM petugas WHERE username = ? LIMIT 1");
         mysqli_stmt_bind_param($stmt_petugas, "s", $username);
         mysqli_stmt_execute($stmt_petugas);
         $result_petugas = mysqli_stmt_get_result($stmt_petugas);
 
         if ($row_p = mysqli_fetch_assoc($result_petugas)) {
             if (password_verify($password, $row_p['password'])) {
-                session_regenerate_id(true); // Keamanan sesi
+                // Regenerasi ID Sesi untuk Mencegah Session Fixation Attack (Sangat Penting untuk Publikasi)
+                session_regenerate_id(true); 
+
                 $_SESSION['id_petugas']   = $row_p['id_petugas'];
                 $_SESSION['nama_petugas'] = $row_p['nama_petugas'];
-                $_SESSION['level']        = $row_p['level']; // 'admin' atau 'petugas'
+                $_SESSION['username']     = $row_p['username'];
+                $_SESSION['level']        = $row_p['level']; // Bernilai 'admin' atau 'petugas'
                 
                 header("Location: admin/dashboard.php");
                 exit();
             }
         }
+        mysqli_stmt_close($stmt_petugas);
 
         // --- 2. CEK KE TABEL MASYARAKAT (Warga) ---
-        $stmt_warga = mysqli_prepare($koneksi, "SELECT * FROM masyarakat WHERE username = ? LIMIT 1");
+        $stmt_warga = mysqli_prepare($koneksi, "SELECT nik, nama, username, password FROM masyarakat WHERE username = ? LIMIT 1");
         mysqli_stmt_bind_param($stmt_warga, "s", $username);
         mysqli_stmt_execute($stmt_warga);
         $result_warga = mysqli_stmt_get_result($stmt_warga);
 
         if ($row_w = mysqli_fetch_assoc($result_warga)) {
-            // Menggunakan password_verify karena password di tabel masyarakat sudah di-hash
             if (password_verify($password, $row_w['password'])) {
-                session_regenerate_id(true); // Keamanan sesi
-                $_SESSION['nik']   = $row_w['nik'];
-                $_SESSION['nama']  = $row_w['nama'];
-                $_SESSION['level'] = 'masyarakat';
+                // Regenerasi ID Sesi untuk Mencegah Session Fixation Attack
+                session_regenerate_id(true);
+
+                $_SESSION['nik']      = $row_w['nik'];
+                $_SESSION['nama']     = $row_w['nama'];
+                $_SESSION['username'] = $row_w['username'];
+                $_SESSION['level']    = 'masyarakat';
 
                 header("Location: dashboard.php");
                 exit();
             }
         }
+        mysqli_stmt_close($stmt_warga);
 
-        // Jika tidak cocok di kedua tabel
+        // Pesan error dibuat umum agar hacker tidak tahu apakah username terdaftar atau tidak
         $error = "Username atau password salah!";
     }
 }
@@ -61,6 +92,7 @@ if (isset($_POST['login'])) {
     <title>Login - Layanan Pengaduan Masyarakat</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22 fill=%22%232a5298%22><path d=%22M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-.214c-2.162-1.241-4.49-1.843-6.912-1.773l-.405.012A1.5 1.5 0 0 1 4.5 10.3V5.7a1.5 1.5 0 0 1 1.183-1.469l.405-.012c2.422-.07 4.75-.672 6.912-1.773V2.5zM3 4.5a.5.5 0 0 0-.5.5v6a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5z%22/></svg>">
     <style>
         body {
             background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
@@ -131,6 +163,7 @@ if (isset($_POST['login'])) {
             box-shadow: 0 6px 15px rgba(13, 110, 253, 0.3);
         }
     </style>
+    
 </head>
 <body>
 
@@ -140,7 +173,7 @@ if (isset($_POST['login'])) {
                 <i class="bi bi-person-fill-lock"></i>
             </div>
             <h4 class="fw-bold mb-1">Login Pengaduan</h4>
-            <p class="text-muted small">Silakan Login Menggunakan Akun Yang Sudah Terdaftar</p>
+            <p class="text-muted small">Silakan Masuk Menggunakan Akun Terdaftar</p>
         </div>
         <div class="card-body p-4 pt-2">
             <?php if (!empty($error)): ?>

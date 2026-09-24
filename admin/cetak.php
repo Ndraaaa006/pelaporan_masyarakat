@@ -10,7 +10,7 @@ if (!isset($_SESSION['level']) || ($_SESSION['level'] !== 'admin' && $_SESSION['
 // 2. Proteksi Session Hijacking / Fixation Sederhana
 if (!isset($_SESSION['CREATED'])) {
     $_SESSION['CREATED'] = time();
-} else if (time() - $_SESSION['CREATED'] > 1800) { // Session expired dalam 30 menit
+} else if (time() - $_SESSION['CREATED'] > 1800) { 
     session_regenerate_id(true);
     $_SESSION['CREATED'] = time();
 }
@@ -23,7 +23,7 @@ require_once '../config/koneksi.php';
     <meta charset="UTF-8">
     <title>Cetak Laporan Pengaduan Masyarakat</title>
     <style>
-        body { font-family: Arial, sans-serif; color: #333; }
+        body { font-family: Arial, sans-serif; color: #333; margin: 20px; background: #fff; }
         .cetak-header { text-align: center; margin-bottom: 20px; }
         .cetak-header h2, .cetak-header p { margin: 2px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
@@ -31,21 +31,23 @@ require_once '../config/koneksi.php';
         th { background-color: #f4f4f4; text-align: left; }
         .text-center { text-align: center; }
         @media print {
-            .no-print { display: none; }
+            .no-print { display: none !important; }
         }
     </style>
 </head>
-<body onload="window.print()">
+<body>
+
+    <div class="no-print" style="margin-bottom: 20px; padding: 10px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e2e8f0;">
+        <button onclick="window.print()" style="padding: 8px 16px; background: #0d6efd; color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: bold;">
+            🖨️ Cetak / Simpan PDF
+        </button>
+        <span style="font-size: 12px; color: #666; margin-left: 10px;">Klik tombol ini untuk cetak dokumen.</span>
+    </div>
 
     <div class="cetak-header">
         <h2>LAPORAN PENGADUAN MASYARAKAT</h2>
         <p>Aplikasi Pelayanan Pengaduan Masyarakat (UKK RPL)</p>
         <hr style="border: 1px solid #333; margin-top: 10px;">
-    </div>
-
-    <div class="no-print" style="margin-bottom: 15px;">
-        <button onclick="window.print()" style="padding: 8px 15px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px;">Cetak Dokumen</button>
-        <a href="dashboard.php" style="margin-left: 10px; text-decoration: none; color: #555;">Kembali ke Dashboard</a>
     </div>
 
     <table>
@@ -62,19 +64,18 @@ require_once '../config/koneksi.php';
             <?php
             $no = 1;
             
-            // 3. Menggunakan Prepared Statement untuk Mencegah SQL Injection (walaupun tidak ada parameter GET/POST)
+            // 3. Menggunakan Prepared Statement untuk Mencegah SQL Injection
             $stmt = mysqli_prepare($koneksi, "SELECT id_pengaduan, tgl_pengaduan, nik, isi_laporan, status FROM pengaduan ORDER BY tgl_pengaduan DESC");
             mysqli_stmt_execute($stmt);
             $result = mysqli_stmt_get_result($stmt);
 
             while ($data = mysqli_fetch_assoc($result)) {
-                // 4. Sanitasi Output dengan htmlspecialchars untuk Mencegah XSS (Cross-Site Scripting)
+                // 4. Sanitasi Output dengan htmlspecialchars untuk Mencegah XSS
                 $tgl_pengaduan = htmlspecialchars($data['tgl_pengaduan'], ENT_QUOTES, 'UTF-8');
                 $nik           = htmlspecialchars($data['nik'], ENT_QUOTES, 'UTF-8');
                 $isi_laporan   = htmlspecialchars($data['isi_laporan'], ENT_QUOTES, 'UTF-8');
                 $status        = htmlspecialchars($data['status'], ENT_QUOTES, 'UTF-8');
 
-                // Konversi tampilan status agar lebih rapi
                 if ($status == '0') {
                     $text_status = 'Pending';
                 } elseif ($status == 'proses') {
@@ -92,7 +93,6 @@ require_once '../config/koneksi.php';
             </tr>
             <?php 
             }
-            // Tutup statement
             mysqli_stmt_close($stmt);
             ?>
         </tbody>
