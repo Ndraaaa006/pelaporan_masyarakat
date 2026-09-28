@@ -1,7 +1,6 @@
 <?php
 /**
  * WargaSuara - Layanan Aspirasi & Pengaduan Online Rakyat
-
  */
 
 // Konfigurasi Session yang Aman
@@ -13,9 +12,11 @@ session_start();
 require_once 'config/koneksi.php';
 
 $query_selesai = null;
-$stmt = mysqli_prepare($koneksi, "SELECT pengaduan.*, masyarakat.nama 
+// Menggunakan ORDER BY pengaduan.id_pengaduan DESC agar data terbaru tampil di urutan paling atas
+$stmt = mysqli_prepare($koneksi, "SELECT pengaduan.*, masyarakat.nama, tanggapan.foto AS foto_tanggapan, tanggapan.tanggapan 
     FROM pengaduan 
     JOIN masyarakat ON pengaduan.nik = masyarakat.nik 
+    LEFT JOIN tanggapan ON pengaduan.id_pengaduan = tanggapan.id_pengaduan
     WHERE pengaduan.status = ? 
     ORDER BY pengaduan.id_pengaduan DESC LIMIT 6");
 
@@ -32,7 +33,7 @@ if ($stmt) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WargaSuara — Suara Rakyat, Solusi Cepat</title>
-    <!-- Icon Megafon yang diperbaiki agar tampil sempurna di tab browser -->
+    <!-- Icon Megafon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22 fill=%22%232a5298%22><path d=%22M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-.214c-2.162-1.241-4.49-1.843-6.912-1.773l-.405.012A1.5 1.5 0 0 1 4.5 10.3V5.7a1.5 1.5 0 0 1 1.183-1.469l.405-.012c2.422-.07 4.75-.672 6.912-1.773V2.5zM3 4.5a.5.5 0 0 0-.5.5v6a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5z%22/></svg>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -156,7 +157,7 @@ if ($stmt) {
                         </button>
                     </li>
                     <li class="nav-item ms-lg-2">
-                        <?php if (isset($_SESSION['login']) || isset($_SESSION['user_id']) || isset($_SESSION['nik'])): ?>
+                        <?php if (isset($_SESSION['login']) || isset($_SESSION['user_id']) || isset($_SESSION['nik']) || isset($_SESSION['id_petugas'])): ?>
                             <a href="dashboard.php" class="btn btn-main rounded-pill px-4 py-2 shadow-sm">Dashboard Saya</a>
                         <?php else: ?>
                             <a href="login.php" class="btn btn-main rounded-pill px-4 py-2 shadow-sm">Masuk / Daftar</a>
@@ -237,7 +238,7 @@ if ($stmt) {
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-5 gap-3">
                 <div>
                     <h2 class="fw-bold mb-1">Aduan Publik Selesai</h2>
-                    <p class="text-secondary small mb-0">Daftar laporan warga yang berhasil diselesaikan oleh tim di lapangan.</p>
+                    <p class="text-secondary small mb-0">Daftar laporan warga yang berhasil diselesaikan beserta foto bukti penanganan dari petugas lapangan.</p>
                 </div>
                 <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2 rounded-pill fw-semibold align-self-start">
                     <i class="bi bi-check-circle-fill me-1"></i> Transparansi Teruji
@@ -248,15 +249,15 @@ if ($stmt) {
                 <?php
                 if ($query_selesai && mysqli_num_rows($query_selesai) > 0) {
                     while ($row = mysqli_fetch_assoc($query_selesai)) {
-                        $foto = $row['foto'] ?? '';
+                        $foto = !empty($row['foto_tanggapan']) ? $row['foto_tanggapan'] : ($row['foto'] ?? '');
                         $safe_foto = basename($foto);
                         $path_foto = 'uploads/' . $safe_foto;
                 ?>
                     <div class="col-md-4">
                         <div class="custom-card h-100 overflow-hidden d-flex flex-column">
                             <?php if (!empty($safe_foto) && file_exists($path_foto)) { ?>
-                                <a href="<?= htmlspecialchars($path_foto, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer">
-                                    <img src="<?= htmlspecialchars($path_foto, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" class="w-100" style="height: 200px; object-fit: cover;" alt="Bukti Foto">
+                                <a href="<?= htmlspecialchars($path_foto, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" title="Klik untuk memperbesar foto">
+                                    <img src="<?= htmlspecialchars($path_foto, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" class="w-100" style="height: 200px; object-fit: cover;" alt="Bukti Penanganan Selesai">
                                 </a>
                             <?php } else { ?>
                                 <div class="bg-secondary bg-opacity-10 d-flex align-items-center justify-content-center text-muted" style="height: 200px;">
@@ -274,7 +275,10 @@ if ($stmt) {
                                     <?= nl2br(htmlspecialchars(substr($row['isi_laporan'] ?? '', 0, 90), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')) ?>...
                                 </p>
                                 <div class="bg-body-secondary rounded-3 p-2 text-center mt-auto">
-                                    <small class="text-success fw-semibold"><i class="bi bi-check2-all me-1"></i> Penanganan Selesai</small>
+                                    <small class="text-success fw-semibold">
+                                        <i class="bi bi-check2-all me-1"></i> 
+                                        <?= !empty($row['tanggapan']) ? htmlspecialchars(substr($row['tanggapan'], 0, 45)).'...' : 'Penanganan Selesai' ?>
+                                    </small>
                                 </div>
                             </div>
                         </div>

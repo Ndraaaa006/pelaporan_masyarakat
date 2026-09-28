@@ -23,7 +23,7 @@ if (empty($_SESSION['csrf_token'])) {
 }
 
 // ==========================================
-// 3. PROSES SIMPAN TANGGAPAN DENGAN VALIDASI KETAT
+// 3. PROSES SIMPAN TANGGAPAN DENGAN UPLOAD FOTO
 // ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Validasi CSRF Token
@@ -34,54 +34,110 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tanggapan     = trim($_POST['tanggapan'] ?? '');
     $status_input  = $_POST['status'] ?? 'selesai';
     $tgl_tanggapan = date('Y-m-d');
-    $id_petugas    = $_SESSION['id_petugas'] ?? null;
+    $id_petugas    = $_SESSION['id_petugas'] ?? null; // ID petugas yang sedang login
 
     // Whitelist status untuk mencegah manipulasi form
     $allowed_status = ['proses', 'selesai'];
     $status = in_array($status_input, $allowed_status) ? $status_input : 'selesai';
 
-    if (!empty($tanggapan)) {
-        // Cek apakah pengaduan ini sudah pernah ditanggapi sebelumnya
-        $stmt_cek = mysqli_prepare($koneksi, "SELECT id_tanggapan FROM tanggapan WHERE id_pengaduan = ?");
-        mysqli_stmt_bind_param($stmt_cek, "i", $id_pengaduan);
-        mysqli_stmt_execute($stmt_cek);
-        $result_cek = mysqli_stmt_get_result($stmt_cek);
-        
-        if (mysqli_num_rows($result_cek) > 0) {
-            // Update tanggapan yang sudah ada
-            $stmt = mysqli_prepare($koneksi, "UPDATE tanggapan SET tgl_tanggapan = ?, tanggapan = ?, id_petugas = ? WHERE id_pengaduan = ?");
-            mysqli_stmt_bind_param($stmt, "sssi", $tgl_tanggapan, $tanggapan, $id_petugas, $id_pengaduan);
-            mysqli_stmt_execute($stmt);
-            mysqli_stmt_close($stmt);
+    $nama_file_baru = null;
+
+    // Proses Validasi & Upload Foto Bukti Tanggapan (Opsional)
+    if (isset($_FILES['foto_tanggapan']) && $_FILES['foto_tanggapan']['error'] !== UPLOAD_ERR_NO_FILE) {
+        $file       = $_FILES['foto_tanggapan'];
+        $file_name  = $file['name'];
+        $file_size  = $file['size'];
+        $file_tmp   = $file['tmp_name'];
+        $file_error = $file['error'];
+
+        if ($file_error === 0) {
+            $allowed_extensions = ['jpg', 'jpeg', 'png', 'webp'];
+            $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+
+            if (in_array($file_ext, $allowed_extensions)) {
+                // Maksimal ukuran file 2MB
+                if ($file_size <= 2 * 1024 * 1024) {
+                    $nama_file_baru = 'tanggapan_' . uniqid() . '.' . $file_ext;
+                    $upload_dir = '../uploads/';
+
+                    if (!is_dir($upload_dir)) {
+                        mkdir($upload_dir, 0755, true);
+                    }
+
+                    if (!move_uploaded_file($file_tmp, $upload_dir . $nama_file_baru)) {
+                        $error = "Gagal mengunggah foto bukti tanggapan.";
+                    }
+                } else {
+                    $error = "Ukuran foto terlalu besar! Maksimal 2MB.";
+                }
+            } else {
+                $error = "Format file tidak didukung! Gunakan JPG, JPEG, PNG, atau WEBP.";
+            }
         } else {
-            // Insert tanggapan baru
-            $stmt = mysqli_prepare($koneksi, "INSERT INTO tanggapan (id_pengaduan, tgl_tanggapan, tanggapan, id_petugas) VALUES (?, ?, ?, ?)");
-            mysqli_stmt_bind_param($stmt, "issi", $id_pengaduan, $tgl_tanggapan, $tanggapan, $id_petugas);
-            mysqli_stmt_execute($stmt);
-            mysqli_stmt_close($stmt);
+            $error = "Terjadi kesalahan saat upload file.";
         }
-        mysqli_stmt_close($stmt_cek);
+    }
 
-        // Update status pengaduan
-        $stmt_status = mysqli_prepare($koneksi, "UPDATE pengaduan SET status = ? WHERE id_pengaduan = ?");
-        mysqli_stmt_bind_param($stmt_status, "si", $status, $id_pengaduan);
-        mysqli_stmt_execute($stmt_status);
-        mysqli_stmt_close($stmt_status);
+    if (empty($error)) {
+        if (!empty($tanggapan)) {
+            // Cek apakah pengaduan ini sudah pernah ditanggapi sebelumnya
+            $stmt_cek = mysqli_prepare($koneksi, "SELECT id_tanggapan, foto FROM tanggapan WHERE id_pengaduan = ?");
+            mysqli_stmt_bind_param($stmt_cek, "i", $id_pengaduan);
+            mysqli_stmt_execute($stmt_cek);
+            $result_cek = mysqli_stmt_get_result($stmt_cek);
+            $row_existing = mysqli_fetch_assoc($result_cek);
+            mysqli_stmt_close($stmt_cek);
 
-        $sukses = "Tanggapan berhasil dikirim!";
-    } else {
-        $error = "Tanggapan tidak boleh kosong!";
+            if ($row_existing) {
+                // Jika ada foto baru yang di-upload, hapus foto lama jika ada
+                if ($nama_file_baru && !empty($row_existing['foto'])) {
+                    $path_lama = '../uploads/' . $row_existing['foto'];
+                    if (file_exists($path_lama)) {
+                        unlink($path_lama);
+                    }
+                } else {
+                    // Jika tidak upload foto baru, pertahankan foto lama
+                    $nama_file_baru = $row_existing['foto'];
+                }
+
+                // Update tanggapan yang sudah ada (termasuk id_petugas yang sedang login)
+                $stmt = mysqli_prepare($koneksi, "UPDATE tanggapan SET tgl_tanggapan = ?, tanggapan = ?, id_petugas = ?, foto = ? WHERE id_pengaduan = ?");
+                mysqli_stmt_bind_param($stmt, "sssii", $tgl_tanggapan, $tanggapan, $id_petugas, $nama_file_baru, $id_pengaduan);
+                mysqli_stmt_execute($stmt);
+                mysqli_stmt_close($stmt);
+            } else {
+                // Insert tanggapan baru (menyimpan id_petugas ke database)
+                $stmt = mysqli_prepare($koneksi, "INSERT INTO tanggapan (id_pengaduan, tgl_tanggapan, tanggapan, id_petugas, foto) VALUES (?, ?, ?, ?, ?)");
+                mysqli_stmt_bind_param($stmt, "issis", $id_pengaduan, $tgl_tanggapan, $tanggapan, $id_petugas, $nama_file_baru);
+                mysqli_stmt_execute($stmt);
+                mysqli_stmt_close($stmt);
+            }
+
+            // Update status pengaduan
+            $stmt_status = mysqli_prepare($koneksi, "UPDATE pengaduan SET status = ? WHERE id_pengaduan = ?");
+            mysqli_stmt_bind_param($stmt_status, "si", $status, $id_pengaduan);
+            mysqli_stmt_execute($stmt_status);
+            mysqli_stmt_close($stmt_status);
+
+            $sukses = "Tanggapan berhasil dikirim!";
+        } else {
+            $error = "Tanggapan tidak boleh kosong!";
+        }
     }
 }
 
 // ==========================================
-// 4. AMBIL DETAIL PENGADUAN & PELAPOR (Prepared Statement)
+// 4. AMBIL DETAIL PENGADUAN, PELAPOR & TANGGAPAN
 // ==========================================
-$query = "SELECT p.*, m.nama, t.tanggapan, t.tgl_tanggapan 
+$query = "SELECT p.*, m.nama, 
+                 t.id_tanggapan, t.tanggapan, t.tgl_tanggapan, t.foto AS foto_targgapan, 
+                 pt.nama_petugas 
           FROM pengaduan p 
           JOIN masyarakat m ON p.nik = m.nik 
           LEFT JOIN tanggapan t ON p.id_pengaduan = t.id_pengaduan 
+          LEFT JOIN petugas pt ON t.id_petugas = pt.id_petugas 
           WHERE p.id_pengaduan = ?";
+
 $stmt = mysqli_prepare($koneksi, $query);
 mysqli_stmt_bind_param($stmt, "i", $id_pengaduan);
 mysqli_stmt_execute($stmt);
@@ -138,7 +194,7 @@ if (!$data) {
             <!-- Detail Laporan Warga -->
             <div class="col-lg-6">
                 <div class="card p-4 h-100">
-                    <h5 class="fw-bold mb-3"><i class="bi bi-file-earmark-text-fill text-primary me-2"></i> Detail Laporan</h5>
+                    <h5 class="fw-bold mb-3"><i class="bi bi-file-earmark-text-fill text-primary me-2"></i> Detail Laporan Warga</h5>
                     <hr>
                     <div class="mb-3">
                         <small class="text-muted d-block">Nama Pelapor</small>
@@ -155,7 +211,7 @@ if (!$data) {
                     </div>
                     <?php if (!empty($data['foto'])): ?>
                         <div class="mb-3">
-                            <small class="text-muted d-block mb-1">Foto Bukti</small>
+                            <small class="text-muted d-block mb-1">Foto Bukti Pengaduan</small>
                             <a href="../uploads/<?= htmlspecialchars($data['foto'], ENT_QUOTES, 'UTF-8') ?>" target="_blank">
                                 <img src="../uploads/<?= htmlspecialchars($data['foto'], ENT_QUOTES, 'UTF-8') ?>" class="img-fluid rounded-3 shadow-sm" style="max-height: 220px; object-fit: cover;">
                             </a>
@@ -180,7 +236,7 @@ if (!$data) {
                         </div>
                     <?php endif; ?>
 
-                    <form action="" method="POST">
+                    <form action="" method="POST" enctype="multipart/form-data">
                         <!-- Proteksi CSRF Token -->
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') ?>">
 
@@ -191,10 +247,27 @@ if (!$data) {
                                 <option value="selesai" <?= (($data['status'] ?? '') == 'selesai' || ($data['status'] ?? '') == '0') ? 'selected' : '' ?>>Selesai</option>
                             </select>
                         </div>
-                        <div class="mb-4">
-                            <label class="form-label fw-semibold small text-secondary">Teks Tanggapan</label>
-                            <textarea name="tanggapan" class="form-control" rows="5" required placeholder="Tuliskan tanggapan atau tindak lanjut untuk warga..."><?= htmlspecialchars($data['tanggapan'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-secondary">Teks Tanggapan / Tindak Lanjut</label>
+                            <textarea name="tanggapan" class="form-control" rows="4" required placeholder="Tuliskan tanggapan atau tindak lanjut untuk warga..."><?= htmlspecialchars($data['tanggapan'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
                         </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold small text-secondary">Upload Foto Bukti Tanggapan (Opsional)</label>
+                            <input type="file" name="foto_tanggapan" class="form-control" accept=".jpg, .jpeg, .png, .webp">
+                            <div class="form-text text-muted" style="font-size: 0.75rem;">Format: JPG, JPEG, PNG, WEBP. Maksimal ukuran 2MB.</div>
+                            
+                            <?php if (!empty($data['foto_targgapan'])): ?>
+                                <div class="mt-2">
+                                    <span class="small text-muted d-block">Foto Bukti Saat Ini:</span>
+                                    <a href="../uploads/<?= htmlspecialchars($data['foto_targgapan'], ENT_QUOTES, 'UTF-8') ?>" target="_blank">
+                                        <img src="../uploads/<?= htmlspecialchars($data['foto_targgapan'], ENT_QUOTES, 'UTF-8') ?>" class="img-thumbnail mt-1" style="width: 80px; height: 80px; object-fit: cover;">
+                                    </a>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-primary rounded-pill px-4">
                                 <i class="bi bi-send-fill me-1"></i> Simpan Tanggapan

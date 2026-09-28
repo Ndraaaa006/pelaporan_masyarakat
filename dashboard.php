@@ -72,11 +72,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($error)) {
             if (!empty($judul) && !empty($isi_input)) {
-                $isi_laporan = "Judul: " . $judul . "\n\n" . "Isi Laporan:\n" . $isi_input;
+                $gabung_laporan = "Judul: " . $judul . "\n\n" . "Isi Laporan:\n" . $isi_input;
 
                 $stmt = mysqli_prepare($koneksi, "INSERT INTO pengaduan (tgl_pengaduan, nik, isi_laporan, foto, status) VALUES (?, ?, ?, ?, '0')");
                 if ($stmt) {
-                    mysqli_stmt_bind_param($stmt, "ssss", $tgl_pengaduan, $nik, $isi_laporan, $foto);
+                    mysqli_stmt_bind_param($stmt, "ssss", $tgl_pengaduan, $nik, $gabung_laporan, $foto);
                     
                     if (mysqli_stmt_execute($stmt)) {
                         mysqli_stmt_close($stmt);

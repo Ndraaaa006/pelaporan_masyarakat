@@ -44,17 +44,29 @@ $jml_proses  = (int)($stats['jml_proses'] ?? 0);
 $jml_selesai = (int)($stats['jml_selesai'] ?? 0);
 $jml_total   = (int)($stats['jml_total'] ?? 0);
 
-// 3. Mengambil Data Pengaduan, Masyarakat, dan Tanggapan secara Aman
+// --- PENGATURAN PAGINATION ---
+$limit = 10; // Batas 10 data per halaman
+$page = isset($_GET['halaman']) ? (int)$_GET['halaman'] : 1;
+$page = ($page > 1) ? $page : 1;
+$start = ($page > 1) ? ($page * $limit) - $limit : 0;
+
+// Hitung total halaman
+$total_halaman = ceil($jml_total / $limit);
+
+// 3. Mengambil Data Pengaduan (Ditambah JOIN ke tabel petugas untuk nama_petugas)
 $query = "SELECT p.id_pengaduan, p.tgl_pengaduan, p.nik, p.isi_laporan, p.foto, p.status, 
-                 m.nama, t.tanggapan, t.tgl_tanggapan 
+                 m.nama, t.tanggapan, t.tgl_tanggapan, pt.nama_petugas 
           FROM pengaduan p 
           JOIN masyarakat m ON p.nik = m.nik 
           LEFT JOIN tanggapan t ON p.id_pengaduan = t.id_pengaduan 
-          ORDER BY p.tgl_pengaduan DESC";
+          LEFT JOIN petugas pt ON t.id_petugas = pt.id_petugas
+          ORDER BY p.tgl_pengaduan DESC 
+          LIMIT ?, ?";
 
 $stmt_laporan = mysqli_prepare($koneksi, $query);
 $laporans = [];
 if ($stmt_laporan) {
+    mysqli_stmt_bind_param($stmt_laporan, "ii", $start, $limit);
     mysqli_stmt_execute($stmt_laporan);
     $result = mysqli_stmt_get_result($stmt_laporan);
     while ($row = mysqli_fetch_assoc($result)) {
@@ -226,22 +238,23 @@ if ($stmt_laporan) {
                     <thead>
                         <tr>
                             <th class="text-center" width="5%">No</th>
-                            <th width="12%">Tanggal</th>
-                            <th width="18%">Pelapor</th>
-                            <th width="25%">Isi Laporan</th>
-                            <th width="8%" class="text-center">Foto</th>
-                            <th width="10%">Status</th>
-                            <th width="12%">Tanggapan</th>
+                            <th width="11%">Tanggal</th>
+                            <th width="15%">Pelapor</th>
+                            <th width="20%">Isi Laporan</th>
+                            <th width="7%" class="text-center">Foto</th>
+                            <th width="9%">Status</th>
+                            <th width="13%">Tanggapan</th>
+                            <th width="10%">Petugas</th> <!-- Kolom Baru Ditambahkan -->
                             <th width="10%" class="text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($laporans)): ?>
                             <tr>
-                                <td colspan="8" class="text-center py-5 text-muted fst-italic">Belum ada data pengaduan yang masuk.</td>
+                                <td colspan="9" class="text-center py-5 text-muted fst-italic">Belum ada data pengaduan yang masuk.</td>
                             </tr>
                         <?php else: ?>
-                            <?php $no = 1; foreach ($laporans as $row): ?>
+                            <?php $no = $start + 1; foreach ($laporans as $row): ?>
                                 <tr>
                                     <td class="text-center fw-semibold text-muted"><?= $no++ ?></td>
                                     <td>
@@ -282,6 +295,14 @@ if ($stmt_laporan) {
                                             <span class="text-muted fst-italic" style="font-size: 0.75rem;">Menunggu diverifikasi</span>
                                         <?php endif; ?>
                                     </td>
+                                    
+                                    <!-- KODE YANG DITANYAKAN DITEMPATKAN DI SINI -->
+                                    <td>
+                                        <span class="small text-dark">
+                                            <?= htmlspecialchars($row['nama_petugas'] ?? 'Belum diverifikasi', ENT_QUOTES, 'UTF-8') ?>
+                                        </span>
+                                    </td>
+
                                     <td class="text-center">
                                         <div class="d-flex justify-content-center gap-1">
                                             <a href="tanggapan.php?id=<?= (int)$row['id_pengaduan'] ?>" class="btn btn-sm btn-primary px-2 py-1 rounded-1" title="Tanggapi">
@@ -298,6 +319,31 @@ if ($stmt_laporan) {
                     </tbody>
                 </table>
             </div>
+
+            <!-- Navigasi Pagination -->
+            <?php if ($total_halaman > 1): ?>
+                <nav class="mt-4">
+                    <ul class="pagination justify-content-center mb-0">
+                        <!-- Tombol Previous -->
+                        <li class="page-item <?= ($page <= 1) ? 'disabled' : '' ?>">
+                            <a class="page-link" href="?halaman=<?= $page - 1 ?>">Sebelumnya</a>
+                        </li>
+
+                        <!-- Nomor Halaman -->
+                        <?php for ($i = 1; $i <= $total_halaman; $i++): ?>
+                            <li class="page-item <?= ($page == $i) ? 'active' : '' ?>">
+                                <a class="page-link" href="?halaman=<?= $i ?>"><?= $i ?></a>
+                            </li>
+                        <?php endfor; ?>
+
+                        <!-- Tombol Next -->
+                        <li class="page-item <?= ($page >= $total_halaman) ? 'disabled' : '' ?>">
+                            <a class="page-link" href="?halaman=<?= $page + 1 ?>">Berikutnya</a>
+                        </li>
+                    </ul>
+                </nav>
+            <?php endif; ?>
+
         </div>
     </div>
 
